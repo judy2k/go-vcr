@@ -35,7 +35,7 @@ import (
 	"net/http/httputil"
 	"os"
 
-	"github.com/dnaeon/go-vcr/cassette"
+	"github.com/judy2k/go-vcr/cassette"
 )
 
 // Mode represents recording/playback mode
@@ -102,6 +102,7 @@ func requestHandler(r *http.Request, c *cassette.Cassette, mode Mode, realTransp
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -123,6 +124,10 @@ func requestHandler(r *http.Request, c *cassette.Cassette, mode Mode, realTransp
 			Status:  resp.Status,
 			Code:    resp.StatusCode,
 		},
+	}
+	err = c.Filter(interaction)
+	if err != nil {
+		return nil, err
 	}
 	c.AddInteraction(interaction)
 
@@ -219,5 +224,12 @@ func (r *Recorder) CancelRequest(req *http.Request) {
 func (r *Recorder) SetMatcher(matcher cassette.Matcher) {
 	if r.cassette != nil {
 		r.cassette.Matcher = matcher
+	}
+}
+
+// SetFilter is a hook to modify a request before it is recorded, for example to remove sensitive parameters.
+func (r *Recorder) SetFilter(filter cassette.Filter) {
+	if r.cassette != nil {
+		r.cassette.Filter = filter
 	}
 }
